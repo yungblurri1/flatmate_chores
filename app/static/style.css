@@ -130,6 +130,28 @@ body {
   border-radius: 999px;
 }
 
+/* Reassign picker, styled to sit like a chip in the card footer */
+.reassign {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px 5px 11px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+.person-select {
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  max-width: 110px;
+}
+.person-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 /* Boards */
 .board { margin-top: 28px; }
 .board-head {
@@ -220,6 +242,37 @@ body {
   border-radius: 5px;
   padding: 1px 5px;
   font-size: 12px;
+}
+
+/* Who's slacking */
+.range-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.range-pill {
+  text-decoration: none;
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  padding: 6px 13px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.range-pill:hover { border-color: var(--ink); }
+.range-pill.active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+.chart-wrap {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px 20px;
 }
 
 /* Accessibility */

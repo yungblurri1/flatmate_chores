@@ -26,12 +26,12 @@
   </header>
 
   <nav class="weeknav">
-    <a class="weeknav-btn" href="/?week_offset={{ week_offset - 1 }}">‹ Prev</a>
+    <a class="weeknav-btn" href="/?week_offset={{ week_offset - 1 }}&range={{ range_key }}">‹ Prev</a>
     <div class="weeknav-label">
       <strong>{{ monday.strftime('%d %b') }} – {{ sunday.strftime('%d %b') }}</strong>
       {% if is_current_week %}<span class="badge-now">This week</span>{% endif %}
     </div>
-    <a class="weeknav-btn" href="/?week_offset={{ week_offset + 1 }}">Next ›</a>
+    <a class="weeknav-btn" href="/?week_offset={{ week_offset + 1 }}&range={{ range_key }}">Next ›</a>
   </nav>
 
   <section class="board">
@@ -48,16 +48,25 @@
             {% if a.task.description %}<p class="task-desc">{{ a.task.description }}</p>{% endif %}
           </div>
           <div class="card-foot">
-            <span class="chip">
+            <form method="post" action="/reassign" class="reassign">
+              <input type="hidden" name="task_id" value="{{ a.task.id }}">
+              <input type="hidden" name="period_key" value="{{ a.period_key }}">
+              <input type="hidden" name="week_offset" value="{{ week_offset }}">
+              <input type="hidden" name="range" value="{{ range_key }}">
               <span class="dot" style="background: {{ person_colors[a.person] }}"></span>
-              {{ a.person }}
-            </span>
+              <select name="person" class="person-select" onchange="this.form.submit()" aria-label="Reassign {{ a.task.name }}">
+                {% for p in people %}
+                  <option value="{{ p }}" {{ 'selected' if p == a.person else '' }}>{{ p }}</option>
+                {% endfor %}
+              </select>
+            </form>
             <form method="post" action="/toggle">
               <input type="hidden" name="task_id" value="{{ a.task.id }}">
               <input type="hidden" name="period_key" value="{{ a.period_key }}">
               <input type="hidden" name="person" value="{{ a.person }}">
               <input type="hidden" name="done" value="{{ '0' if row.done else '1' }}">
               <input type="hidden" name="week_offset" value="{{ week_offset }}">
+              <input type="hidden" name="range" value="{{ range_key }}">
               <button type="submit" class="check {{ 'checked' if row.done else '' }}">
                 {{ 'Done' if row.done else 'Mark done' }}
               </button>
@@ -82,16 +91,25 @@
             {% if a.task.description %}<p class="task-desc">{{ a.task.description }}</p>{% endif %}
           </div>
           <div class="card-foot">
-            <span class="chip">
+            <form method="post" action="/reassign" class="reassign">
+              <input type="hidden" name="task_id" value="{{ a.task.id }}">
+              <input type="hidden" name="period_key" value="{{ a.period_key }}">
+              <input type="hidden" name="week_offset" value="{{ week_offset }}">
+              <input type="hidden" name="range" value="{{ range_key }}">
               <span class="dot" style="background: {{ person_colors[a.person] }}"></span>
-              {{ a.person }}
-            </span>
+              <select name="person" class="person-select" onchange="this.form.submit()" aria-label="Reassign {{ a.task.name }}">
+                {% for p in people %}
+                  <option value="{{ p }}" {{ 'selected' if p == a.person else '' }}>{{ p }}</option>
+                {% endfor %}
+              </select>
+            </form>
             <form method="post" action="/toggle">
               <input type="hidden" name="task_id" value="{{ a.task.id }}">
               <input type="hidden" name="period_key" value="{{ a.period_key }}">
               <input type="hidden" name="person" value="{{ a.person }}">
               <input type="hidden" name="done" value="{{ '0' if row.done else '1' }}">
               <input type="hidden" name="week_offset" value="{{ week_offset }}">
+              <input type="hidden" name="range" value="{{ range_key }}">
               <button type="submit" class="check {{ 'checked' if row.done else '' }}">
                 {{ 'Done' if row.done else 'Mark done' }}
               </button>
@@ -102,10 +120,108 @@
     </div>
   </section>
 
+  <section class="board">
+    <div class="board-head">
+      <h2>Who's slacking</h2>
+      <span class="board-sub">Assigned chores left undone once their period closed</span>
+    </div>
+
+    <div class="range-picker">
+      {% for key, opt in range_options.items() %}
+        <a href="/?week_offset={{ week_offset }}&range={{ key }}"
+           data-range="{{ key }}"
+           class="range-pill {{ 'active' if key == range_key else '' }}">{{ opt.label }}</a>
+      {% endfor %}
+    </div>
+
+    <div class="chart-wrap">
+      {% if slack_labels %}
+        <canvas id="missedChart"></canvas>
+      {% else %}
+        <p class="board-sub">No flatmates configured yet.</p>
+      {% endif %}
+    </div>
+  </section>
+
   <footer class="foot">
     Assignments are computed from the date. Edit <code>config.yaml</code> to change people or chores.
   </footer>
 
 </main>
+
+{% if slack_labels %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  // Draws the count as text just past the end of each horizontal bar.
+  const barValueLabels = {
+    id: 'barValueLabels',
+    afterDatasetsDraw(chart) {
+      const { ctx } = chart;
+      chart.getDatasetMeta(0).data.forEach((bar, index) => {
+        const value = chart.data.datasets[0].data[index];
+        ctx.save();
+        ctx.fillStyle = '#1b2320';
+        ctx.font = '600 13px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(value, bar.x + 8, bar.y);
+        ctx.restore();
+      });
+    },
+  };
+
+  const chart = new Chart(document.getElementById('missedChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ slack_labels | tojson }},
+      datasets: [{
+        label: 'Missed chores',
+        data: {{ slack_values | tojson }},
+        backgroundColor: {{ slack_colors | tojson }},
+        borderRadius: 6,
+        maxBarThickness: 40,
+      }],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      layout: { padding: { right: 28 } },
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { beginAtZero: true, grace: '15%', ticks: { precision: 0 } },
+      },
+    },
+    plugins: [barValueLabels],
+  });
+
+  // Range picker: fetch and redraw in place instead of a full page reload, so
+  // clicking a range doesn't reset scroll position or reload the whole roster.
+  document.querySelectorAll('.range-pill').forEach((pill) => {
+    pill.addEventListener('click', async (event) => {
+      if (pill.classList.contains('active')) { event.preventDefault(); return; }
+      event.preventDefault();
+
+      const res = await fetch(`/api/slacking?range=${encodeURIComponent(pill.dataset.range)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+
+      document.querySelectorAll('.range-pill').forEach((p) => {
+        p.classList.toggle('active', p === pill);
+      });
+
+      chart.data.labels = data.labels;
+      chart.data.datasets[0].data = data.values;
+      chart.data.datasets[0].backgroundColor = data.colors;
+      chart.update();
+
+      const url = new URL(window.location);
+      url.searchParams.set('range', data.range_key);
+      window.history.replaceState({}, '', url);
+    });
+  });
+})();
+</script>
+{% endif %}
 </body>
 </html>

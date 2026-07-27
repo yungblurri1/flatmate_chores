@@ -1,15 +1,19 @@
 """FastAPI entrypoint.
 
-Two routes:
-  GET  /         show the roster for the current week (or an offset week)
-  POST /toggle   mark a chore done / not done for its period
+Routes:
+  GET  /               show the roster for the current week (or an offset week)
+  POST /toggle         mark a chore done / not done for its period
+  POST /reassign       swap who a chore is assigned to for one period
+  GET  /api/slacking   JSON missed-chore counts, used to refresh the chart without a full reload
 
-The UI is server-rendered with Jinja2, so it works with no client-side JS and
-deploys as a single process.
+The roster itself is server-rendered with Jinja2, so it works with no client-side
+JS and deploys as a single process. The slacking chart's range picker fetches from
+/api/slacking for a snappier, SPA-like update instead of reloading the page.
 """
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -18,7 +22,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import db
+from . import db, stats
 from .config import load_config
 from .rotation import assignments_for, week_bounds
 
@@ -47,12 +51,19 @@ def _target_day(week_offset: int) -> date:
 
 
 @app.get("/")
-def index(request: Request, week_offset: int = 0):
+def index(request: Request, week_offset: int = 0, range: str = stats.DEFAULT_RANGE):
     config = load_config()
     day = _target_day(week_offset)
+    range_key = range if range in stats.RANGE_OPTIONS else stats.DEFAULT_RANGE
 
     assignments = assignments_for(day, config.people, config.tasks)
-    done_lookup = db.done_map(sorted({a.period_key for a in assignments}))
+    period_keys = sorted({a.period_key for a in assignments})
+    done_lookup = db.done_map(period_keys)
+    reassign_map = db.reassignment_map(period_keys)
+    assignments = [
+        replace(a, person=reassign_map.get((a.task.id, a.period_key), a.person))
+        for a in assignments
+    ]
 
     weekly = []
     monthly = []
@@ -68,6 +79,10 @@ def index(request: Request, week_offset: int = 0):
     for row in weekly:
         load_by_person[row["assignment"].person] += 1
 
+    colors = _person_colors(config.people)
+    missed = stats.missed_by_person(config, range_key)
+    slack_labels = sorted(config.people, key=lambda p: missed.get(p, 0), reverse=True)
+
     return templates.TemplateResponse(
         "index.html",
         {
@@ -82,7 +97,12 @@ def index(request: Request, week_offset: int = 0):
             "month_label": day.strftime("%B %Y"),
             "is_current_week": week_offset == 0,
             "load_by_person": load_by_person,
-            "person_colors": _person_colors(config.people),
+            "person_colors": colors,
+            "range_key": range_key,
+            "range_options": stats.RANGE_OPTIONS,
+            "slack_labels": slack_labels,
+            "slack_values": [missed.get(p, 0) for p in slack_labels],
+            "slack_colors": [colors[p] for p in slack_labels],
         },
     )
 
@@ -94,6 +114,35 @@ def toggle(
     person: str = Form(""),
     done: str = Form("0"),
     week_offset: int = Form(0),
+    range: str = Form(stats.DEFAULT_RANGE),
 ):
     db.set_done(task_id, period_key, done == "1", person or None)
-    return RedirectResponse(url=f"/?week_offset={week_offset}", status_code=303)
+    return RedirectResponse(url=f"/?week_offset={week_offset}&range={range}", status_code=303)
+
+
+@app.post("/reassign")
+def reassign(
+    task_id: str = Form(...),
+    period_key: str = Form(...),
+    person: str = Form(...),
+    week_offset: int = Form(0),
+    range: str = Form(stats.DEFAULT_RANGE),
+):
+    db.set_reassignment(task_id, period_key, person)
+    return RedirectResponse(url=f"/?week_offset={week_offset}&range={range}", status_code=303)
+
+
+@app.get("/api/slacking")
+def slacking(range: str = stats.DEFAULT_RANGE):
+    config = load_config()
+    range_key = range if range in stats.RANGE_OPTIONS else stats.DEFAULT_RANGE
+    colors = _person_colors(config.people)
+    missed = stats.missed_by_person(config, range_key)
+    labels = sorted(config.people, key=lambda p: missed.get(p, 0), reverse=True)
+
+    return {
+        "range_key": range_key,
+        "labels": labels,
+        "values": [missed.get(p, 0) for p in labels],
+        "colors": [colors[p] for p in labels],
+    }
