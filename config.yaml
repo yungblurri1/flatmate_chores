@@ -1,0 +1,48 @@
+# Edit this file to change who lives here and which chores rotate.
+# No code changes needed. Restart the app (or refresh in dev) to pick up edits.
+
+household_name: "Bümplir Girlianas"
+
+# The rotation order. People are assigned round-robin in this order.
+flatmates:
+  - Alex
+  - Giada
+  - Bia
+
+# Each task needs a unique id, a name, and a frequency of "weekly" or "monthly".
+# description is optional and shows under the task name.
+tasks:
+  - id: kitchen
+    name: Kitchen
+    frequency: weekly
+    description: Wipe counters and stove, clean the sink, empty food scraps.
+
+  - id: bathroom
+    name: Bathroom
+    frequency: weekly
+    description: Toilet, sink, mirror, quick floor wipe.
+
+  - id: trash
+    name: Trash & recycling
+    frequency: weekly
+    description: Take out all bins, replace bags, flatten cardboard.
+
+  - id: vacuum
+    name: Vacuum & floors
+    frequency: weekly
+    description: Vacuum common areas, mop the hallway.
+
+  - id: windows
+    name: Windows
+    frequency: monthly
+    description: Clean windows in the common areas.
+
+  - id: fridge
+    name: Fridge deep-clean
+    frequency: monthly
+    description: Empty, wipe shelves, toss anything expired.
+
+  - id: descale
+    name: Descale kettle & coffee machine
+    frequency: monthly
+    description: Run a descaling cycle, rinse well.

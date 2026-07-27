@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ household_name }} · Chores</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="page">
+
+  <header class="masthead">
+    <div class="masthead-title">
+      <span class="eyebrow">Chore roster</span>
+      <h1>{{ household_name }}</h1>
+    </div>
+    <div class="roster-strip">
+      {% for person in people %}
+        <span class="chip">
+          <span class="dot" style="background: {{ person_colors[person] }}"></span>
+          {{ person }}
+          <span class="chip-load">{{ load_by_person[person] }}</span>
+        </span>
+      {% endfor %}
+    </div>
+  </header>
+
+  <nav class="weeknav">
+    <a class="weeknav-btn" href="/?week_offset={{ week_offset - 1 }}">‹ Prev</a>
+    <div class="weeknav-label">
+      <strong>{{ monday.strftime('%d %b') }} – {{ sunday.strftime('%d %b') }}</strong>
+      {% if is_current_week %}<span class="badge-now">This week</span>{% endif %}
+    </div>
+    <a class="weeknav-btn" href="/?week_offset={{ week_offset + 1 }}">Next ›</a>
+  </nav>
+
+  <section class="board">
+    <div class="board-head">
+      <h2>Weekly</h2>
+      <span class="board-sub">Rotates every Monday</span>
+    </div>
+    <div class="cards">
+      {% for row in weekly %}
+        {% set a = row.assignment %}
+        <article class="card {{ 'is-done' if row.done else '' }}">
+          <div class="card-body">
+            <h3 class="task-name">{{ a.task.name }}</h3>
+            {% if a.task.description %}<p class="task-desc">{{ a.task.description }}</p>{% endif %}
+          </div>
+          <div class="card-foot">
+            <span class="chip">
+              <span class="dot" style="background: {{ person_colors[a.person] }}"></span>
+              {{ a.person }}
+            </span>
+            <form method="post" action="/toggle">
+              <input type="hidden" name="task_id" value="{{ a.task.id }}">
+              <input type="hidden" name="period_key" value="{{ a.period_key }}">
+              <input type="hidden" name="person" value="{{ a.person }}">
+              <input type="hidden" name="done" value="{{ '0' if row.done else '1' }}">
+              <input type="hidden" name="week_offset" value="{{ week_offset }}">
+              <button type="submit" class="check {{ 'checked' if row.done else '' }}">
+                {{ 'Done' if row.done else 'Mark done' }}
+              </button>
+            </form>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="board">
+    <div class="board-head">
+      <h2>Monthly</h2>
+      <span class="board-sub">{{ month_label }}</span>
+    </div>
+    <div class="cards">
+      {% for row in monthly %}
+        {% set a = row.assignment %}
+        <article class="card monthly {{ 'is-done' if row.done else '' }}">
+          <div class="card-body">
+            <h3 class="task-name">{{ a.task.name }}</h3>
+            {% if a.task.description %}<p class="task-desc">{{ a.task.description }}</p>{% endif %}
+          </div>
+          <div class="card-foot">
+            <span class="chip">
+              <span class="dot" style="background: {{ person_colors[a.person] }}"></span>
+              {{ a.person }}
+            </span>
+            <form method="post" action="/toggle">
+              <input type="hidden" name="task_id" value="{{ a.task.id }}">
+              <input type="hidden" name="period_key" value="{{ a.period_key }}">
+              <input type="hidden" name="person" value="{{ a.person }}">
+              <input type="hidden" name="done" value="{{ '0' if row.done else '1' }}">
+              <input type="hidden" name="week_offset" value="{{ week_offset }}">
+              <button type="submit" class="check {{ 'checked' if row.done else '' }}">
+                {{ 'Done' if row.done else 'Mark done' }}
+              </button>
+            </form>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <footer class="foot">
+    Assignments are computed from the date. Edit <code>config.yaml</code> to change people or chores.
+  </footer>
+
+</main>
+</body>
+</html>
