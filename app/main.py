@@ -17,7 +17,7 @@ from dataclasses import replace
 from datetime import date, timedelta
 from pathlib import Path
 
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, Form, Request, Response
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -48,6 +48,17 @@ def _startup() -> None:
 
 def _target_day(week_offset: int) -> date:
     return date.today() + timedelta(weeks=week_offset)
+
+
+@app.head("/")
+def index_head() -> Response:
+    """Answer uptime/health checks that probe with HEAD.
+
+    FastAPI's @app.get() registers GET only -- unlike raw Starlette routes, it does
+    not imply HEAD -- so without this a HEAD / health check gets a 405. Kept
+    separate from index() so a health ping costs no template render or DB query.
+    """
+    return Response(status_code=200)
 
 
 @app.get("/")
