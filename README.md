@@ -16,7 +16,7 @@ flatmate-chores/
 │   ├── main.py          FastAPI routes (view roster, mark done)
 │   ├── rotation.py      Pure rotation logic (unit-tested)
 │   ├── config.py        Loads config.yaml
-│   ├── db.py            SQLite completion tracking
+│   ├── db.py            Postgres completion tracking
 │   ├── templates/       Jinja2 HTML
 │   └── static/          CSS
 ├── config.yaml          <- edit this: people + chores
@@ -28,7 +28,17 @@ flatmate-chores/
 
 ## Run it locally
 
-Requires Python 3.10+.
+Requires Python 3.10+ and a Postgres database.
+
+Start a local Postgres with Docker:
+
+```bash
+docker run -d --name chores-db -p 5432:5432 \
+  -e POSTGRES_USER=chores -e POSTGRES_PASSWORD=chores -e POSTGRES_DB=chores \
+  postgres:16-alpine
+```
+
+Then:
 
 ```bash
 cd flatmate-chores
@@ -36,11 +46,13 @@ python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
+export DATABASE_URL=postgresql://chores:chores@localhost:5432/chores
 python run.py
 ```
 
 Open http://127.0.0.1:8000. The `--reload` flag in `run.py` picks up code changes
-automatically. After editing `config.yaml`, refresh the page.
+automatically. After editing `config.yaml`, refresh the page. The `completions`
+table is created automatically on startup if it doesn't exist.
 
 Run the tests:
 
@@ -73,40 +85,27 @@ Add a person or a chore, save, refresh.
 - A `/history` page reading the `completions` table
 - Swap the round-robin for a fairness-aware assignment
 - Push/email reminders on Monday morning
-- Move from SQLite to Postgres for durable, multi-instance storage
 
-## Deploy it (free options, as of mid-2026)
+## Deploy it on Render
 
-This is a single always-on web process, so a container/PaaS host fits best.
+This is a single always-on web process plus a Postgres database.
 
-**Render (simplest free path).** Push the repo to GitHub, create a *Web Service*,
-no credit card needed. Build command `pip install -r requirements.txt`, start
-command:
+1. **Create the database.** In the Render dashboard: *New → Postgres*. Pick the
+   free plan for a prototype (note: Render's free Postgres is deleted after 30
+   days — upgrade to the cheapest paid plan for anything you want to keep).
+2. **Create the web service.** *New → Web Service*, connect this repo.
+   - Build command: `pip install -r requirements.txt`
+   - Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+   - Or skip both and let Render use the included `Dockerfile`.
+3. **Wire up `DATABASE_URL`.** On the web service's *Environment* tab, add
+   `DATABASE_URL` and set it to the Postgres instance's **Internal Database URL**
+   (found on the database's page). Using the internal URL keeps traffic inside
+   Render's network and avoids the connection limit on the external one. If the
+   two are in the same Render account/region you can also add the database as an
+   "Environment Group" or link it directly so Render injects the URL for you.
+4. **Deploy.** On first request, `app/db.py` creates the `completions` table
+   automatically — no separate migration step needed.
 
-```
-uvicorn app.main:app --host 0.0.0.0 --port $PORT
-```
-
-The free tier spins the service down when idle, so the first request after a quiet
-spell takes ~1 minute to wake. Fine for a household prototype. $7/mo removes the
-spin-down.
-
-**Railway.** Also git-push-to-deploy with automatic Python detection and no credit
-card to start. Nicer if you later add a managed Postgres. Free usage is limited by
-monthly credit; the ~$5 Hobby plan keeps it always-on.
-
-**PythonAnywhere.** Free tier aimed at small Python apps if you prefer a web
-dashboard over Git deploys.
-
-**Google Cloud Run.** Uses the included `Dockerfile`, scales to zero, per-request
-billing with a free allowance. Good if you want containerized and mostly-idle.
-
-Note: **Fly.io no longer offers a free tier for new users** (requires a card).
-
-### SQLite caveat on free tiers
-
-The `chores.db` file lives on the container's local disk, which is **ephemeral** on
-Render/Railway/Cloud Run free tiers. It resets on redeploy or restart. Because the
-roster itself is recomputed from the date, only the "done" ticks are lost, which is
-usually acceptable for a prototype. For durable ticks, attach a persistent volume or
-switch `db.py` to a managed Postgres.
+The free web service tier spins down when idle, so the first request after a quiet
+spell takes ~1 minute to wake; the Postgres connection reconnects fine after that.
+$7/mo on the web service removes the spin-down.
