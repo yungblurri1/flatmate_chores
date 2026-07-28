@@ -3,225 +3,36 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ household_name }} · Chores</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <title>{{ state.householdName }} · Chores</title>
+  <link rel="icon" href="/static/goofy.ico" sizes="32x32">
+  {# ?v= is the asset mtime: a deploy changes the URL, so browsers cannot serve
+     new markup against a cached old stylesheet. #}
+  <link rel="stylesheet" href="/static/style.css?v={{ asset_version }}">
 </head>
 <body>
-<main class="page">
 
-  <header class="masthead">
-    <div class="masthead-title">
-      <span class="eyebrow">Chore roster</span>
-      <h1>{{ household_name }}</h1>
-    </div>
-    <div class="roster-strip">
-      {% for person in people %}
-        <span class="chip">
-          <span class="dot" style="background: {{ person_colors[person] }}"></span>
-          {{ person }}
-          <span class="chip-load">{{ load_by_person[person] }}</span>
-        </span>
-      {% endfor %}
-    </div>
-  </header>
+<div id="app"></div>
 
-  <nav class="weeknav">
-    <a class="weeknav-btn" href="/?week_offset={{ week_offset - 1 }}&range={{ range_key }}">‹ Prev</a>
-    <div class="weeknav-label">
-      <strong>{{ monday.strftime('%d %b') }} – {{ sunday.strftime('%d %b') }}</strong>
-      {% if is_current_week %}<span class="badge-now">This week</span>{% endif %}
+{# Lives outside #app so re-rendering a view never destroys it. <dialog> gives us
+   the focus trap, Esc-to-close and backdrop for free. #}
+<dialog id="confirm-dialog" class="modal" aria-labelledby="confirm-title">
+  <form method="dialog" class="modal-inner">
+    <h2 class="modal-title" id="confirm-title">Delete this chore?</h2>
+    <p class="modal-text" id="confirm-text"></p>
+    <div class="modal-actions">
+      <button value="cancel" class="btn-ghost" autofocus>Keep it</button>
+      <button value="ok" class="btn-danger">Delete</button>
     </div>
-    <a class="weeknav-btn" href="/?week_offset={{ week_offset + 1 }}&range={{ range_key }}">Next ›</a>
-  </nav>
+  </form>
+</dialog>
 
-  <section class="board">
-    <div class="board-head">
-      <h2>Weekly</h2>
-      <span class="board-sub">Rotates every Monday</span>
-    </div>
-    <div class="cards">
-      {% for row in weekly %}
-        {% set a = row.assignment %}
-        <article class="card {{ 'is-done' if row.done else '' }}">
-          <div class="card-body">
-            <h3 class="task-name">{{ a.task.name }}</h3>
-            {% if a.task.description %}<p class="task-desc">{{ a.task.description }}</p>{% endif %}
-          </div>
-          <div class="card-foot">
-            <form method="post" action="/reassign" class="reassign">
-              <input type="hidden" name="task_id" value="{{ a.task.id }}">
-              <input type="hidden" name="period_key" value="{{ a.period_key }}">
-              <input type="hidden" name="week_offset" value="{{ week_offset }}">
-              <input type="hidden" name="range" value="{{ range_key }}">
-              <span class="dot" style="background: {{ person_colors[a.person] }}"></span>
-              <select name="person" class="person-select" onchange="this.form.submit()" aria-label="Reassign {{ a.task.name }}">
-                {% for p in people %}
-                  <option value="{{ p }}" {{ 'selected' if p == a.person else '' }}>{{ p }}</option>
-                {% endfor %}
-              </select>
-            </form>
-            <form method="post" action="/toggle">
-              <input type="hidden" name="task_id" value="{{ a.task.id }}">
-              <input type="hidden" name="period_key" value="{{ a.period_key }}">
-              <input type="hidden" name="person" value="{{ a.person }}">
-              <input type="hidden" name="done" value="{{ '0' if row.done else '1' }}">
-              <input type="hidden" name="week_offset" value="{{ week_offset }}">
-              <input type="hidden" name="range" value="{{ range_key }}">
-              <button type="submit" class="check {{ 'checked' if row.done else '' }}">
-                {{ 'Done' if row.done else 'Mark done' }}
-              </button>
-            </form>
-          </div>
-        </article>
-      {% endfor %}
-    </div>
-  </section>
+{# The entire app state, inlined so the first paint costs no extra request. From
+   here on the browser recomputes rosters itself and only talks to the server to
+   save a change. #}
+<script id="initial-state" type="application/json">{{ state | tojson }}</script>
 
-  <section class="board">
-    <div class="board-head">
-      <h2>Monthly</h2>
-      <span class="board-sub">{{ month_label }}</span>
-    </div>
-    <div class="cards">
-      {% for row in monthly %}
-        {% set a = row.assignment %}
-        <article class="card monthly {{ 'is-done' if row.done else '' }}">
-          <div class="card-body">
-            <h3 class="task-name">{{ a.task.name }}</h3>
-            {% if a.task.description %}<p class="task-desc">{{ a.task.description }}</p>{% endif %}
-          </div>
-          <div class="card-foot">
-            <form method="post" action="/reassign" class="reassign">
-              <input type="hidden" name="task_id" value="{{ a.task.id }}">
-              <input type="hidden" name="period_key" value="{{ a.period_key }}">
-              <input type="hidden" name="week_offset" value="{{ week_offset }}">
-              <input type="hidden" name="range" value="{{ range_key }}">
-              <span class="dot" style="background: {{ person_colors[a.person] }}"></span>
-              <select name="person" class="person-select" onchange="this.form.submit()" aria-label="Reassign {{ a.task.name }}">
-                {% for p in people %}
-                  <option value="{{ p }}" {{ 'selected' if p == a.person else '' }}>{{ p }}</option>
-                {% endfor %}
-              </select>
-            </form>
-            <form method="post" action="/toggle">
-              <input type="hidden" name="task_id" value="{{ a.task.id }}">
-              <input type="hidden" name="period_key" value="{{ a.period_key }}">
-              <input type="hidden" name="person" value="{{ a.person }}">
-              <input type="hidden" name="done" value="{{ '0' if row.done else '1' }}">
-              <input type="hidden" name="week_offset" value="{{ week_offset }}">
-              <input type="hidden" name="range" value="{{ range_key }}">
-              <button type="submit" class="check {{ 'checked' if row.done else '' }}">
-                {{ 'Done' if row.done else 'Mark done' }}
-              </button>
-            </form>
-          </div>
-        </article>
-      {% endfor %}
-    </div>
-  </section>
-
-  <section class="board">
-    <div class="board-head">
-      <h2>Who's slacking</h2>
-      <span class="board-sub">Assigned chores left undone once their period closed</span>
-    </div>
-
-    <div class="range-picker">
-      {% for key, opt in range_options.items() %}
-        <a href="/?week_offset={{ week_offset }}&range={{ key }}"
-           data-range="{{ key }}"
-           class="range-pill {{ 'active' if key == range_key else '' }}">{{ opt.label }}</a>
-      {% endfor %}
-    </div>
-
-    <div class="chart-wrap">
-      {% if slack_labels %}
-        <canvas id="missedChart"></canvas>
-      {% else %}
-        <p class="board-sub">No flatmates configured yet.</p>
-      {% endif %}
-    </div>
-  </section>
-
-  <footer class="foot">
-    Assignments are computed from the date. Edit <code>config.yaml</code> to change people or chores.
-  </footer>
-
-</main>
-
-{% if slack_labels %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-<script>
-(function () {
-  // Draws the count as text just past the end of each horizontal bar.
-  const barValueLabels = {
-    id: 'barValueLabels',
-    afterDatasetsDraw(chart) {
-      const { ctx } = chart;
-      chart.getDatasetMeta(0).data.forEach((bar, index) => {
-        const value = chart.data.datasets[0].data[index];
-        ctx.save();
-        ctx.fillStyle = '#1b2320';
-        ctx.font = '600 13px -apple-system, BlinkMacSystemFont, sans-serif';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(value, bar.x + 8, bar.y);
-        ctx.restore();
-      });
-    },
-  };
-
-  const chart = new Chart(document.getElementById('missedChart'), {
-    type: 'bar',
-    data: {
-      labels: {{ slack_labels | tojson }},
-      datasets: [{
-        label: 'Missed chores',
-        data: {{ slack_values | tojson }},
-        backgroundColor: {{ slack_colors | tojson }},
-        borderRadius: 6,
-        maxBarThickness: 40,
-      }],
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      layout: { padding: { right: 28 } },
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { beginAtZero: true, grace: '15%', ticks: { precision: 0 } },
-      },
-    },
-    plugins: [barValueLabels],
-  });
-
-  // Range picker: fetch and redraw in place instead of a full page reload, so
-  // clicking a range doesn't reset scroll position or reload the whole roster.
-  document.querySelectorAll('.range-pill').forEach((pill) => {
-    pill.addEventListener('click', async (event) => {
-      if (pill.classList.contains('active')) { event.preventDefault(); return; }
-      event.preventDefault();
-
-      const res = await fetch(`/api/slacking?range=${encodeURIComponent(pill.dataset.range)}`);
-      if (!res.ok) return;
-      const data = await res.json();
-
-      document.querySelectorAll('.range-pill').forEach((p) => {
-        p.classList.toggle('active', p === pill);
-      });
-
-      chart.data.labels = data.labels;
-      chart.data.datasets[0].data = data.values;
-      chart.data.datasets[0].backgroundColor = data.colors;
-      chart.update();
-
-      const url = new URL(window.location);
-      url.searchParams.set('range', data.range_key);
-      window.history.replaceState({}, '', url);
-    });
-  });
-})();
-</script>
-{% endif %}
+<script src="/static/rotation.js?v={{ asset_version }}"></script>
+<script src="/static/app.js?v={{ asset_version }}"></script>
 </body>
 </html>
