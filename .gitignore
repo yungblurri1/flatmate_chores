@@ -5,3 +5,5 @@ venv/
 chores.db
 .env
 .pytest_cache/
+# WSL leaves these behind when files are copied over from Windows.
+*:Zone.Identifier

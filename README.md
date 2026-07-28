@@ -8,23 +8,60 @@ The rotation is a **pure function of the date**. There is no scheduler and no cr
 job: given today's date, the people, and the tasks, the app recomputes the whole
 roster. That keeps it simple and easy to reason about.
 
+It is a single-page app: **one GET** returns a shell with the whole state inlined,
+and everything after that renders in the browser. Changing week, switching the
+slacking range, and opening the manage view make no request at all. Only saving a
+change talks to the server.
+
 ## Project layout
 
 ```
 flatmate-chores/
 ├── app/
-│   ├── main.py          FastAPI routes (view roster, mark done)
-│   ├── rotation.py      Pure rotation logic (unit-tested)
+│   ├── main.py          App shell + JSON API
+│   ├── rotation.py      Pure rotation logic (unit-tested) -- the reference
+│   ├── stats.py         Slacking maths (pure, unit-tested) -- the reference
 │   ├── config.py        Loads config.yaml
-│   ├── db.py            Postgres completion tracking
-│   ├── templates/       Jinja2 HTML
-│   └── static/          CSS
-├── config.yaml          <- edit this: people + chores
-├── tests/               pytest for rotation.py
+│   ├── db.py            Postgres: the chore list + completion tracking
+│   ├── templates/       The shell page
+│   └── static/
+│       ├── rotation.js  Mirrors rotation.py + stats.py; parity-tested
+│       ├── app.js       Views and wiring
+│       ├── style.css
+│       ├── goofy.ico    Favicon
+│       ├── images/      <- weekly banner pictures
+│       └── faces/       <- one portrait per flatmate, named after them
+├── config.yaml          <- edit this: people (+ the seed chore list)
+├── tests/               pytest, incl. a Python<->JS parity suite
 ├── requirements.txt
 ├── run.py               Local entrypoint
 └── Dockerfile
 ```
+
+## Pictures
+
+Two folders, both read at startup — restart to pick up new files. Accepted
+everywhere: `.jpg`, `.png`, `.gif`, `.webp`, `.avif`, `.svg`.
+
+### The weekly banner — `app/static/images/`
+
+Put in any number of images. One shows per week, in filename order, wrapping round
+at the end, and it changes as you page through weeks so each week has "its"
+picture. A single file shows every week; an empty folder renders no banner.
+
+It sits as a **thin banner** so it never pushes the chores off the first screen —
+**drag its bottom edge** to open it up and see the whole image. The height you pick
+is remembered.
+
+### Flatmate portraits — `app/static/faces/`
+
+Name each file after the person: `Giada.png` for Giada. Matching is
+case-insensitive, so `giada.jpg` works too. That face then appears wherever the
+person does — the roster chips and every chore card — ringed in their colour.
+
+Anyone without a file keeps the plain coloured dot, so you can fill the folder in
+one person at a time. The colour ring is deliberate: it means the colour coding
+still works when only some people have a photo.
 
 ## Run it locally
 
@@ -51,8 +88,13 @@ python run.py
 ```
 
 Open http://127.0.0.1:8000. The `--reload` flag in `run.py` picks up code changes
-automatically. After editing `config.yaml`, refresh the page. The `completions`
-table is created automatically on startup if it doesn't exist.
+automatically. After editing `config.yaml`, restart. The tables are created on
+startup if they don't exist, and the chore list is seeded from `config.yaml` the
+first time it finds an empty one.
+
+The CSS and JS are served with a `?v=` stamp taken from their modification time, so
+a browser can never render new markup against a cached old stylesheet. If a change
+doesn't show up, that is not the cause — check the server actually restarted.
 
 Run the tests:
 
@@ -63,21 +105,75 @@ python -m pytest
 
 ## Change people and chores
 
-Everything lives in `config.yaml`. No code changes needed.
+There are two kinds of chore, edited in two different places.
 
-- `flatmates`: the rotation order.
-- `tasks`: each needs a unique `id`, a `name`, and `frequency` (`weekly` or
-  `monthly`). `description` is optional.
+**One-off chores — press `Edit` on the roster.** The cards start wobbling, a `×`
+appears on each one to delete it, and a `+` tile appears on each board. Anything
+added there belongs to **only the week or month you are looking at** and never comes
+back. Good for "the kitchen is a disaster after the party".
 
-Add a person or a chore, save, refresh.
+**Repeating chores — the `Manage chores` page.** Add weekly or monthly chores that
+rotate forever, choose **who starts** with each one (everyone else follows in
+order), change the starter later, or delete one. `‹ Back to the roster` returns.
+
+**People: in `config.yaml`.** `flatmates` is the rotation order. Add a person, save,
+restart.
+
+The `tasks` list in `config.yaml` only *seeds* the database on first run against an
+empty one. Chores live in Postgres after that, because the app is meant to run on a
+host with an ephemeral filesystem — writing UI edits back to the YAML file would
+lose them on the next deploy. Editing `tasks` in the YAML once the table is
+populated has no effect.
+
+### What add and delete do to the rotation
+
+Each chore carries a `slot`: a stable rotation offset within its frequency group,
+rather than its position in the list. Adding a chore takes the next free slot and
+deleting one leaves a gap, so in both cases **every other chore keeps the same
+person in every week, past and present**. If the offset were the list index instead,
+deleting one chore would silently re-shuffle responsibility for all the chores after
+it, retroactively, across the whole slacking history.
+
+Deleting a chore also drops its completion and reassignment rows, so it disappears
+from the "who's slacking" board rather than leaving a permanent mark against whoever
+last skipped it. Deleting is not undoable — re-adding a chore with the same name
+starts it fresh.
+
+### Nothing counts before a chore existed
+
+Every chore stores a `starts_on` date and simply does not exist in any period before
+it. A chore added today is not "missed" for all of last year, so the slacking board
+opens empty on a fresh rota instead of with a backlog nobody could have done. Chores
+seeded from `config.yaml` start the day the table is first created; an existing
+deployment backfills them to the day it picks this up.
 
 ## How it works
 
 - `week_index(date)` counts weeks from a fixed Monday; `month_index(date)` counts
   months. Assignment is `people[(period_index + task_offset) % len(people)]`.
-- The `task_offset` spreads tasks in the same period across different people.
+- The `task_offset` is the chore's stored `slot`, which spreads tasks in the same
+  period across different people and stays put when chores are added or deleted.
 - Completion is stored per `(task_id, period_key)` where `period_key` is like
   `W-123` or `M-45`. A new week/month starts everyone fresh automatically.
+- A one-off chore is a row with that same `period_key` set on the chore itself, so
+  it exists in exactly one period. `NULL` means it repeats.
+
+### The duplicated rotation logic
+
+Rendering offline means the rotation maths exists twice: `rotation.py`/`stats.py`
+and `static/rotation.js`. **Python is the reference** — change it there first.
+`tests/test_js_parity.py` runs the real JavaScript under Node against the real
+Python over three years of dates and every slacking range, and fails if they
+disagree, so the copies cannot drift silently. It skips if Node isn't installed.
+
+### Person colours
+
+The six colours in `main.py` are not arbitrary. A person's colour follows them
+everywhere, so any two can appear side by side — an *all-pairs* palette problem.
+The set was chosen by validating candidates for colour-vision separation: at five
+people it clears deficiency separation (worst ΔE 13.0) and the normal-vision floor
+(16.3). A name is always rendered next to the dot, so colour never identifies
+anyone on its own — which is what keeps a sixth flatmate acceptable.
 
 ## Ideas to extend
 
@@ -103,8 +199,11 @@ This is a single always-on web process plus a Postgres database.
    Render's network and avoids the connection limit on the external one. If the
    two are in the same Render account/region you can also add the database as an
    "Environment Group" or link it directly so Render injects the URL for you.
-4. **Deploy.** On first request, `app/db.py` creates the `completions` table
-   automatically — no separate migration step needed.
+4. **Deploy.** On startup, `app/db.py` creates the `tasks`, `completions` and
+   `reassignments` tables automatically and seeds `tasks` from `config.yaml` — no
+   separate migration step needed. An already-running deployment picks this up on
+   its next deploy: the seed reproduces the existing rotation exactly, so nobody's
+   chores move.
 
 The free web service tier spins down when idle, so the first request after a quiet
 spell takes ~1 minute to wake; the Postgres connection reconnects fine after that.
