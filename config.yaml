@@ -1,5 +1,9 @@
-# Edit this file to change who lives here and which chores rotate.
-# No code changes needed. Restart the app (or refresh in dev) to pick up edits.
+# Edit this file to change who lives here. No code changes needed. Restart the app
+# (or refresh in dev) to pick up edits.
+#
+# The `tasks` below are only a starting point: they seed the database the first
+# time the app runs against an empty one. After that, add and remove chores from
+# the web page itself -- editing them here has no effect.
 
 household_name: "Bümplir Girlianas"
 
@@ -7,10 +11,10 @@ household_name: "Bümplir Girlianas"
 flatmates:
   - Alex
   - Giada
-  - Bia
+  - Bianca
 
-# Each task needs a unique id, a name, and a frequency of "weekly" or "monthly".
-# description is optional and shows under the task name.
+# Seed chores. Each needs a unique id, a name, and a frequency of "weekly" or
+# "monthly". description is optional and shows under the task name.
 tasks:
   - id: kitchen
     name: Kitchen

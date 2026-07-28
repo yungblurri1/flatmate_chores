@@ -1,7 +1,9 @@
-"""Load the flatmates and tasks from config.yaml.
+"""Load the flatmates and the starting chore list from config.yaml.
 
-Editing the roster means editing one YAML file. No code changes needed to add a
-person or a chore, which is the main thing that keeps this app extensible.
+Who lives here is still configured by editing this one YAML file. The chores under
+`tasks` only seed the database the first time the app runs against an empty one --
+after that the live list is in Postgres and is edited from the web UI, so changes
+survive a restart on a host with an ephemeral disk. See db.seed_tasks.
 """
 
 from __future__ import annotations
@@ -22,7 +24,7 @@ _DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.yaml"
 class AppConfig:
     household_name: str
     people: list[str]
-    tasks: list[Task]
+    seed_tasks: list[Task]
 
 
 def load_config(path: str | os.PathLike | None = None) -> AppConfig:
@@ -52,5 +54,5 @@ def load_config(path: str | os.PathLike | None = None) -> AppConfig:
     return AppConfig(
         household_name=str(raw.get("household_name", "Our Flat")),
         people=people,
-        tasks=tasks,
+        seed_tasks=tasks,
     )
