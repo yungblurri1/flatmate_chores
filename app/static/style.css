@@ -1,32 +1,92 @@
 :root {
-  --bg: #f3f5f4;
+  --bg: #f4f6f5;
   --surface: #ffffff;
   --ink: #1b2320;
   --muted: #6c7772;
-  --line: #e3e7e5;
+  --line: #e6eae8;
   --line-strong: #cfd6d3;
   --accent: #0f9d76;
-  --done-bg: #eaf7f1;
+  --accent-soft: #e7f5ef;
+  --done-bg: #eefaf4;
   --done-line: #b7e3cf;
-  --radius: 14px;
-  --shadow: 0 1px 2px rgba(27, 35, 32, 0.05), 0 6px 20px rgba(27, 35, 32, 0.04);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 1px 2px rgba(27, 35, 32, 0.04), 0 6px 18px rgba(27, 35, 32, 0.045);
+  --shadow-lift: 0 2px 6px rgba(27, 35, 32, 0.06), 0 14px 32px rgba(27, 35, 32, 0.08);
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  background: var(--bg);
+  /* A very soft wash so the white cards sit on something rather than float. */
+  background:
+    radial-gradient(1100px 420px at 15% -8%, var(--accent-soft), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 .page {
-  max-width: 880px;
+  max-width: 900px;
   margin: 0 auto;
-  padding: 32px 20px 64px;
+  padding: 40px 20px 72px;
+}
+
+/* Hero picture. Rotates weekly; see _images() in main.py.
+ *
+ * A thin banner by default so it never pushes the chores off the first screen,
+ * but drag the handle at its bottom edge and it grows to show the whole picture.
+ * `resize` needs a non-visible overflow to work at all, hence overflow: hidden. */
+.hero {
+  position: relative;
+  margin: 22px 0 0;
+  height: 132px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  background: var(--surface);
+  line-height: 0;
+}
+.hero img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 38%; /* faces usually sit above the middle */
+  user-select: none;
+  -webkit-user-drag: none;
+}
+/* Full-width grab strip along the bottom edge. touch-action: none is what stops
+   a finger drag from scrolling the page instead of resizing. */
+.hero-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 24px;
+  cursor: ns-resize;
+  touch-action: none;
+  background: linear-gradient(transparent, rgba(15, 18, 17, 0.5));
+}
+.hero-grip {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+}
+.hero-handle:hover .hero-grip { width: 60px; }
+
+@media (max-width: 720px) {
+  .hero-handle { height: 30px; } /* a comfortable finger target */
 }
 
 /* Masthead */
@@ -49,10 +109,10 @@ body {
 }
 .masthead h1 {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 34px;
-  line-height: 1.05;
+  font-size: 38px;
+  line-height: 1.03;
   margin: 0;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 }
 .roster-strip {
   display: flex;
@@ -78,6 +138,20 @@ body {
   border-radius: 50%;
   flex: none;
 }
+
+/* Portrait from static/faces, ringed in the person's colour. Drops in wherever a
+   .dot would go, so a flat with only some photos filled in still looks right. */
+.face {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid;
+  object-fit: cover;
+  background: var(--bg);
+}
+.chip .face { margin: -3px 0 -3px -4px; }
+.reassign .face { margin: -3px 0 -3px -3px; }
 .chip-load {
   margin-left: 2px;
   min-width: 18px;
@@ -101,12 +175,14 @@ body {
   margin: 24px 0 8px;
 }
 .weeknav-btn {
+  cursor: pointer;
   text-decoration: none;
   color: var(--ink);
   border: 1px solid var(--line-strong);
   background: var(--surface);
   padding: 8px 14px;
   border-radius: 10px;
+  font: inherit;
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
@@ -153,16 +229,19 @@ body {
 .person-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* Boards */
-.board { margin-top: 28px; }
+.board { margin-top: 36px; }
 .board-head {
   display: flex;
   align-items: baseline;
+  flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
 }
 .board-head h2 {
-  font-size: 15px;
-  letter-spacing: 0.12em;
+  font-size: 13px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   margin: 0;
 }
@@ -170,8 +249,8 @@ body {
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(238px, 1fr));
+  gap: 16px;
 }
 
 /* Cards */
@@ -183,9 +262,14 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 148px;
+  min-height: 152px;
   overflow: hidden;
   position: relative;
+  transition: box-shadow 0.16s ease, transform 0.16s ease;
+}
+.cards .card:not(.card-add):hover {
+  box-shadow: var(--shadow-lift);
+  transform: translateY(-2px);
 }
 .card::before {
   content: "";
@@ -199,8 +283,197 @@ body {
 .card.is-done { background: var(--done-bg); border-color: var(--done-line); }
 
 .card-body { padding: 16px 16px 8px; }
-.task-name { margin: 0 0 4px; font-size: 17px; }
+.task-name { margin: 0 0 4px; padding-right: 22px; font-size: 17px; }
 .task-desc { margin: 0; font-size: 13px; color: var(--muted); }
+
+.badge-oneoff {
+  display: inline-block;
+  margin-bottom: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+.card.is-oneoff::before { background: repeating-linear-gradient(
+  90deg, var(--line-strong) 0 6px, transparent 6px 12px); }
+
+/* ---- Edit mode -------------------------------------------------------------
+   The delete crosses and the add tiles only exist once you press Edit, so the
+   everyday view stays a clean read-only roster. */
+.delete-btn,
+.card-add { display: none; }
+body.is-editing .delete-btn { display: block; }
+body.is-editing .card-add { display: flex; }
+
+/* Delete control, in the card's top-left corner. */
+.delete-btn {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: #b3261e;
+  font-size: 17px;
+  line-height: 1;
+  box-shadow: var(--shadow);
+}
+.delete-btn:hover { background: #b3261e; border-color: #b3261e; color: #fff; }
+body.is-editing .task-name { padding-left: 26px; }
+
+/* The wobble. Alternating directions and slightly different durations keep the
+   cards from marching in lockstep, which is what makes it read as jiggling
+   rather than as one block sliding about. */
+@keyframes jiggle {
+  0%   { transform: rotate(-0.45deg) translateY(0); }
+  50%  { transform: rotate(0.45deg) translateY(-1px); }
+  100% { transform: rotate(-0.45deg) translateY(0); }
+}
+body.is-editing .cards .card { animation: jiggle 0.28s ease-in-out infinite; }
+body.is-editing .cards .card:nth-child(even) { animation-duration: 0.32s; animation-delay: -0.1s; }
+body.is-editing .cards .card:nth-child(3n) { animation-duration: 0.3s; animation-delay: -0.05s; }
+body.is-editing .cards .card.card-add { animation: none; }
+
+/* Add-a-chore tile: same footprint as a card, deliberately quieter. */
+.card-add {
+  background: transparent;
+  border: 1px dashed var(--line-strong);
+  box-shadow: none;
+  align-items: stretch;
+  justify-content: center;
+}
+.card-add::before { display: none; }
+.add-open {
+  cursor: pointer;
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 32px;
+  font-weight: 300;
+  line-height: 1;
+}
+.add-open:hover { color: var(--accent); }
+.card-add.is-open .add-open { display: none; }
+
+.add-form { display: none; flex-direction: column; gap: 8px; padding: 16px; }
+.card-add.is-open .add-form { display: flex; }
+.add-input {
+  width: 100%;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 8px 10px;
+}
+.add-input::placeholder { color: var(--muted); }
+.add-btn {
+  cursor: pointer;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 9px;
+}
+.add-btn:hover { border-color: var(--ink); }
+
+/* ---- Header tools ---------------------------------------------------------- */
+.masthead-tools {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.tool-row { display: flex; gap: 8px; }
+.tool-btn {
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 13px;
+  border-radius: 999px;
+}
+.tool-btn:hover { border-color: var(--ink); }
+.tool-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* ---- Manage view ----------------------------------------------------------- */
+.manage-intro {
+  margin: 20px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+  max-width: 60ch;
+}
+.manage-list { display: flex; flex-direction: column; gap: 8px; }
+.manage-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 12px 14px;
+}
+.manage-main { flex: 1 1 200px; display: flex; flex-direction: column; gap: 2px; }
+.manage-name { font-size: 16px; font-weight: 600; }
+.starter-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.row-delete {
+  cursor: pointer;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: #b3261e;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 9px;
+}
+.row-delete:hover { background: #b3261e; border-color: #b3261e; color: #fff; }
+.empty-note { margin: 0 0 4px; }
+.manage-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+}
+.manage-add .add-input { width: auto; flex: 1 1 180px; }
 
 .card-foot {
   display: flex;
@@ -218,10 +491,13 @@ body {
   border: 1px solid var(--line-strong);
   background: var(--surface);
   color: var(--ink);
+  font: inherit;
   font-size: 13px;
   font-weight: 600;
   padding: 7px 12px;
-  border-radius: 9px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
 }
 .check:hover { border-color: var(--ink); }
 .check.checked {
@@ -231,7 +507,9 @@ body {
 }
 
 .foot {
-  margin-top: 40px;
+  margin-top: 48px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
   font-size: 13px;
   color: var(--muted);
   text-align: center;
@@ -252,12 +530,14 @@ body {
   margin-bottom: 14px;
 }
 .range-pill {
+  cursor: pointer;
   text-decoration: none;
   color: var(--ink);
   border: 1px solid var(--line-strong);
   background: var(--surface);
   padding: 6px 13px;
   border-radius: 999px;
+  font: inherit;
   font-size: 13px;
   font-weight: 600;
 }
@@ -272,16 +552,125 @@ body {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 24px 20px;
+  padding: 26px 22px;
+}
+
+/* ---- Confirm dialog --------------------------------------------------------- */
+.modal {
+  width: min(400px, calc(100vw - 32px));
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 12px 40px rgba(27, 35, 32, 0.22);
+}
+.modal::backdrop {
+  background: rgba(27, 35, 32, 0.42);
+  backdrop-filter: blur(2px);
+}
+.modal[open] { animation: modal-in 0.16s ease-out; }
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+.modal-inner { padding: 22px; }
+.modal-title {
+  margin: 0 0 8px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 21px;
+  line-height: 1.2;
+}
+.modal-text { margin: 0 0 20px; font-size: 14px; color: var(--muted); }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.btn-ghost,
+.btn-danger {
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+}
+.btn-ghost { background: var(--surface); color: var(--ink); }
+.btn-ghost:hover { border-color: var(--ink); }
+.btn-danger { background: #b3261e; border-color: #b3261e; color: #fff; }
+.btn-danger:hover { background: #8f1e18; border-color: #8f1e18; }
+
+@media (prefers-reduced-motion: reduce) {
+  .modal[open] { animation: none; }
 }
 
 /* Accessibility */
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
+  /* Edit mode still needs to look different, so swap the wobble for a tint. */
+  body.is-editing .cards .card { animation: none !important; }
+  body.is-editing .cards .card { border-style: dashed; }
 }
 
-@media (max-width: 520px) {
-  .masthead h1 { font-size: 28px; }
-  .cards { grid-template-columns: 1fr; }
+/* ---- Phone ------------------------------------------------------------------
+   The roster is mostly read on a phone in the kitchen, so this is a real layout,
+   not a squeeze: the masthead unstacks to full width, every control clears the
+   44px touch target, and the edit affordances are always visible because there
+   is no hover to reveal them. */
+@media (max-width: 720px) {
+  .page { padding: 24px 16px 56px; }
+
+  .masthead {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+  .masthead h1 { font-size: 30px; }
+  .masthead-tools { align-items: stretch; }
+  .roster-strip { justify-content: flex-start; }
+  .tool-row { width: 100%; }
+  .tool-btn {
+    flex: 1;
+    text-align: center;
+    padding: 11px 14px;
+    font-size: 14px;
+  }
+
+  .hero { height: 118px; }
+
+  .weeknav { gap: 8px; }
+  .weeknav-btn { padding: 11px 14px; }
+  .weeknav-label { font-size: 15px; text-align: center; }
+
+  .cards { grid-template-columns: 1fr; gap: 12px; }
+  .card { min-height: 0; }
+  /* A lifted card under a finger just looks like a rendering glitch. */
+  .cards .card:not(.card-add):hover { transform: none; box-shadow: var(--shadow); }
+
+  .card-foot { flex-wrap: wrap; gap: 10px; }
+  .check { flex: 1; padding: 11px 12px; min-height: 44px; }
+  .person-select { max-width: none; padding: 4px 0; }
+  .reassign { padding: 7px 10px 7px 12px; }
+
+  .range-picker { gap: 6px; }
+  .range-pill { padding: 9px 13px; }
+  .chart-wrap { padding: 18px 12px; }
+
+  .delete-btn { width: 30px; height: 30px; font-size: 20px; }
+  .add-open { padding: 22px 0; font-size: 30px; }
+
+  .manage-row { align-items: flex-start; }
+  .manage-main { flex-basis: 100%; }
+  .starter-field { flex: 1; }
+  .row-delete { padding: 10px 14px; min-height: 44px; }
+  .manage-add { flex-direction: column; align-items: stretch; }
+  .manage-add .add-input { flex: none; width: 100%; }
+  .manage-add .add-btn { padding: 11px 12px; }
+
+  .modal-actions { flex-direction: column-reverse; }
+  .modal-actions button { width: 100%; padding: 12px 16px; }
+}
+
+/* Coarse pointers get no hover, so nothing may depend on it to be discoverable. */
+@media (hover: none) {
+  .cards .card:not(.card-add):hover { transform: none; }
 }
