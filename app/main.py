@@ -47,18 +47,33 @@ BASE_DIR = Path(__file__).resolve().parent
 # against white, which is fine here only because a name is always rendered next to
 # the dot -- colour never identifies anyone on its own. A sixth flatmate drops into
 # the warn band (red↔magenta ΔE 13.2 normal); the adjacent name is what carries it.
+# The hue order is shared by both themes so nobody's colour identity changes when
+# the page switches mode -- only the step does, chosen for its own surface rather
+# than lightened mechanically from the other. Blue/magenta/green leads because it
+# is the one order that clears both gates in *both* modes (light worst deltaE 13.0
+# CVD and 27.5 normal; dark 13.0 and 26.5). Light stays clean to five people; dark
+# only to three -- past that its violet closes on its blue, and the name beside the
+# dot is what carries identity.
 _PALETTE = [
     "#2a78d6",  # blue
+    "#e87ba4",  # magenta
     "#008300",  # green
     "#4a3aa7",  # violet
-    "#e87ba4",  # magenta
     "#eda100",  # yellow
-    "#e34948",  # red -- 6th flatmate, see note above
+    "#e34948",  # red
+]
+_PALETTE_DARK = [
+    "#3987e5",  # blue
+    "#d55181",  # magenta
+    "#008300",  # green
+    "#9085e9",  # violet
+    "#c98500",  # yellow
+    "#e66767",  # red
 ]
 
 
-def _person_colors(people: list[str]) -> dict[str, str]:
-    return {p: _PALETTE[i % len(_PALETTE)] for i, p in enumerate(people)}
+def _person_colors(people: list[str], palette: list[str]) -> dict[str, str]:
+    return {p: palette[i % len(palette)] for i, p in enumerate(people)}
 
 
 app = FastAPI(title="Flatmate Chores")
@@ -165,7 +180,8 @@ def _initial_state() -> dict:
     return {
         "householdName": config.household_name,
         "people": config.people,
-        "colors": _person_colors(config.people),
+        "colors": _person_colors(config.people, _PALETTE),
+        "colorsDark": _person_colors(config.people, _PALETTE_DARK),
         "faces": _faces(config.people),
         "sounds": _sounds(),
         "tasks": [_task_json(t) for t in db.all_tasks()],

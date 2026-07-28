@@ -43,6 +43,53 @@
     return addDays(TODAY, weekOffset * 7);
   }
 
+  // ------------------------------------------------------------------ theme
+
+  /* Three states, not two: "auto" follows the device, and losing it the moment
+   * you touch the button would be a one-way door. Only an explicit choice is
+   * stored, so a device that later switches to dark still gets dark. */
+  var THEMES = [
+    { key: 'auto', icon: '◐', label: 'Auto' },
+    { key: 'light', icon: '☀', label: 'Light' },
+    { key: 'dark', icon: '☾', label: 'Dark' }
+  ];
+
+  function storedTheme() {
+    var saved = null;
+    try { saved = localStorage.getItem('theme'); } catch (e) { /* private mode */ }
+    return saved === 'light' || saved === 'dark' ? saved : 'auto';
+  }
+
+  function applyTheme(key) {
+    if (key === 'auto') {
+      document.documentElement.removeAttribute('data-theme');
+      try { localStorage.removeItem('theme'); } catch (e) { /* ignore */ }
+    } else {
+      document.documentElement.setAttribute('data-theme', key);
+      try { localStorage.setItem('theme', key); } catch (e) { /* ignore */ }
+    }
+  }
+
+  var prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+
+  /** What is actually on screen right now, whichever way it was decided. */
+  function isDark() {
+    var explicit = document.documentElement.getAttribute('data-theme');
+    if (explicit) return explicit === 'dark';
+    return prefersDark.matches;
+  }
+
+  /** Person colours are stepped per surface, so they switch with the theme. */
+  function colorOf(person) {
+    var palette = isDark() ? STATE.colorsDark : STATE.colors;
+    return palette[person] || '#9aa5a1';
+  }
+
+  /** Read a theme token, so the canvas can be painted from the same source. */
+  function token(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
   /** Assignments for `day`, with reassignments and tick state folded in. */
   function rowsFor(day) {
     return assignmentsFor(day, STATE.people, STATE.tasks).map(function (a) {
@@ -160,7 +207,7 @@
    * Either way it carries their colour -- as the fill, or as a ring round the
    * photo -- so the colour coding still holds when only some people have a face. */
   function dot(person) {
-    var color = esc(STATE.colors[person] || '#9aa5a1');
+    var color = esc(colorOf(person));
     if (STATE.faces[person]) {
       return '<img class="face" src="' + esc(STATE.faces[person]) + '" alt=""' +
         ' style="border-color:' + color + '">';
@@ -197,6 +244,29 @@
       '</article>';
   }
 
+  var REPO = 'https://github.com/yungblurri1/flatmate_chores';
+
+  /* The year comes from the clock rather than being typed in, so the notice does
+   * not quietly go stale next January. External link, so no data-act -- the SPA
+   * router only intercepts its own. */
+  function footerHtml(note) {
+    return '<footer class="foot">' +
+      (note ? '<p class="foot-note">' + note + '</p>' : '') +
+      '<p class="foot-legal">&copy; ' + new Date().getFullYear() + ' yungblurri1 &middot; ' +
+        '<a href="' + REPO + '" target="_blank" rel="noopener noreferrer">' +
+        'flatmate_chores on GitHub</a></p>' +
+    '</footer>';
+  }
+
+  function themeButtonHtml() {
+    var current = THEMES.filter(function (t) { return t.key === storedTheme(); })[0];
+    return '<button class="tool-btn theme-btn" data-act="theme"' +
+      ' aria-label="Colour theme: ' + current.label + '. Click to change."' +
+      ' title="Theme: ' + current.label + '">' +
+      '<span class="theme-icon" aria-hidden="true">' + current.icon + '</span>' +
+      current.label + '</button>';
+  }
+
   function addTileHtml(frequency) {
     var unit = frequency === 'weekly' ? 'week' : 'month';
     return '' +
@@ -224,9 +294,10 @@
     id: 'barValueLabels',
     afterDatasetsDraw: function (c) {
       var ctx = c.ctx;
+      var ink = token('--ink'); // read per draw, so it follows a theme switch
       c.getDatasetMeta(0).data.forEach(function (bar, i) {
         ctx.save();
-        ctx.fillStyle = '#1b2320';
+        ctx.fillStyle = ink;
         ctx.font = '600 13px -apple-system, BlinkMacSystemFont, sans-serif';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
@@ -247,6 +318,7 @@
           '<div class="masthead-tools">' +
             '<div class="roster-strip" id="roster-strip"></div>' +
             '<div class="tool-row">' +
+              themeButtonHtml() +
               '<button class="tool-btn" id="edit-btn" data-act="toggle-edit">Edit</button>' +
               '<a class="tool-btn" href="/chores" data-act="nav">Manage chores</a>' +
             '</div>' +
@@ -283,10 +355,10 @@
           '<div class="range-picker" id="range-picker"></div>' +
           '<div class="chart-wrap"><canvas id="missed-chart"></canvas></div>' +
         '</section>' +
-        '<footer class="foot">' +
+        footerHtml(
           'Assignments are computed from the date. <strong>Edit</strong> adds one-off chores ' +
-          'to a single week or month; <strong>Manage chores</strong> changes the ones that repeat.' +
-        '</footer>' +
+          'to a single week or month; <strong>Manage chores</strong> changes the ones that repeat.'
+        ) +
       '</main>';
 
     chart = new Chart(document.getElementById('missed-chart'), {
@@ -311,7 +383,9 @@
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#1b2320',
+            backgroundColor: token('--ink'),
+            titleColor: token('--surface'),
+            bodyColor: token('--surface'),
             padding: 10,
             cornerRadius: 8,
             displayColors: false,
@@ -327,13 +401,13 @@
             beginAtZero: true,
             grace: '15%',
             border: { display: false },
-            grid: { color: '#eceeed', drawTicks: false },
-            ticks: { precision: 0, color: '#6c7772', padding: 6 }
+            grid: { color: token('--grid'), drawTicks: false },
+            ticks: { precision: 0, color: token('--muted'), padding: 6 }
           },
           y: {
             border: { display: false },
             grid: { display: false },
-            ticks: { color: '#1b2320', font: { weight: '600', size: 13 } }
+            ticks: { color: token('--ink'), font: { weight: '600', size: 13 } }
           }
         }
       },
@@ -473,7 +547,7 @@
 
     chart.data.labels = labels;
     chart.data.datasets[0].data = labels.map(function (p) { return missed[p]; });
-    chart.data.datasets[0].backgroundColor = labels.map(function (p) { return STATE.colors[p]; });
+    chart.data.datasets[0].backgroundColor = labels.map(colorOf);
     chart.update();
   }
 
@@ -505,6 +579,7 @@
           'today &mdash; earlier weeks stay untouched.</p>' +
         manageSectionHtml('weekly', 'Weekly', 'Rotates every Monday') +
         manageSectionHtml('monthly', 'Monthly', 'Rotates on the 1st') +
+        footerHtml('') +
       '</main>';
   }
 
@@ -579,6 +654,12 @@
     today: function () {
       weekOffset = 0;
       refreshRoster();
+    },
+
+    theme: function () {
+      var next = THEMES[(THEMES.map(function (t) { return t.key; }).indexOf(storedTheme()) + 1) % THEMES.length];
+      applyTheme(next.key);
+      route(); // remount so person colours and the chart re-read the new tokens
     },
 
     range: function (el) {
@@ -716,6 +797,11 @@
   }
 
   window.addEventListener('popstate', route);
+
+  // On "auto", follow the device if it flips mid-session (e.g. at sunset).
+  var onSchemeChange = function () { if (storedTheme() === 'auto') route(); };
+  if (prefersDark.addEventListener) prefersDark.addEventListener('change', onSchemeChange);
+  else if (prefersDark.addListener) prefersDark.addListener(onSchemeChange); // older Safari
 
   route();
 })();

@@ -1,18 +1,90 @@
+/* ---- Theme ------------------------------------------------------------------
+ * Light is pink, dark is violet. The dark block is written twice on purpose: the
+ * media query follows the device, the [data-theme] scope follows the toggle, and
+ * the toggle has to win in BOTH directions -- the :not() guard is what lets an
+ * explicit "light" beat a device set to dark. Plain CSS cannot share one block
+ * across a media query and a selector, so the duplication is the price.
+ */
 :root {
-  --bg: #f4f6f5;
+  color-scheme: light;
+
+  --bg: #f6f4f5;
   --surface: #ffffff;
-  --ink: #1b2320;
-  --muted: #6c7772;
-  --line: #e6eae8;
-  --line-strong: #cfd6d3;
-  --accent: #0f9d76;
-  --accent-soft: #e7f5ef;
-  --done-bg: #eefaf4;
-  --done-line: #b7e3cf;
+  --ink: #1c1a1e;
+  --muted: #746a70;
+  --line: #ebe4e8;
+  --line-strong: #d8ccd3;
+
+  --accent: #c2185b;          /* pink */
+  --accent-ink: #ffffff;      /* text on top of --accent */
+  --accent-soft: #fce7f0;
+  --done-bg: #fdf0f5;
+  --done-line: #f2c9dc;
+
+  --grid: #ece6e9;
+  --scrim: rgba(15, 10, 13, 0.5);
+  --danger: #b3261e;
+  --danger-strong: #8f1e18;
+  --danger-ink: #ffffff;
+
   --radius: 16px;
   --radius-sm: 10px;
-  --shadow: 0 1px 2px rgba(27, 35, 32, 0.04), 0 6px 18px rgba(27, 35, 32, 0.045);
-  --shadow-lift: 0 2px 6px rgba(27, 35, 32, 0.06), 0 14px 32px rgba(27, 35, 32, 0.08);
+  --shadow: 0 1px 2px rgba(28, 26, 30, 0.04), 0 6px 18px rgba(28, 26, 30, 0.05);
+  --shadow-lift: 0 2px 6px rgba(28, 26, 30, 0.07), 0 14px 32px rgba(28, 26, 30, 0.09);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --bg: #131118;
+    --surface: #1c1b24;
+    --ink: #ece9f5;
+    --muted: #a49dba;
+    --line: #2c2939;
+    --line-strong: #3d3950;
+
+    --accent: #a78bfa;        /* violet */
+    --accent-ink: #17151f;
+    --accent-soft: #241f38;
+    --done-bg: #211d33;
+    --done-line: #3f3663;
+
+    --grid: #2c2939;
+    --scrim: rgba(0, 0, 0, 0.62);
+    --danger: #f2685f;
+    --danger-strong: #ff8178;
+    --danger-ink: #1a0f0e;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 18px rgba(0, 0, 0, 0.34);
+    --shadow-lift: 0 2px 6px rgba(0, 0, 0, 0.46), 0 14px 32px rgba(0, 0, 0, 0.44);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #131118;
+  --surface: #1c1b24;
+  --ink: #ece9f5;
+  --muted: #a49dba;
+  --line: #2c2939;
+  --line-strong: #3d3950;
+
+  --accent: #a78bfa;
+  --accent-ink: #17151f;
+  --accent-soft: #241f38;
+  --done-bg: #211d33;
+  --done-line: #3f3663;
+
+  --grid: #2c2939;
+  --scrim: rgba(0, 0, 0, 0.62);
+  --danger: #f2685f;
+  --danger-strong: #ff8178;
+  --danger-ink: #1a0f0e;
+
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 18px rgba(0, 0, 0, 0.34);
+  --shadow-lift: 0 2px 6px rgba(0, 0, 0, 0.46), 0 14px 32px rgba(0, 0, 0, 0.44);
 }
 
 * { box-sizing: border-box; }
@@ -89,30 +161,65 @@ body {
   .hero-handle { height: 30px; } /* a comfortable finger target */
 }
 
-/* Masthead */
+/* Masthead. The heavy ink rule is replaced by a hairline that fades out from the
+   accent, so the header sits on the page rather than being boxed off from it. */
 .masthead {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-end;
   gap: 16px;
-  padding-bottom: 20px;
-  border-bottom: 2px solid var(--ink);
+  padding-bottom: 22px;
+  border-bottom: none;
+  position: relative;
+}
+.masthead::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--line) 62%, transparent);
 }
 .eyebrow {
-  display: block;
-  font-size: 12px;
-  letter-spacing: 0.14em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 4px;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+/* A short accent rule leading into the eyebrow -- cheap, and it ties the header
+   to the theme colour without tinting the title itself. */
+.eyebrow::before {
+  content: "";
+  width: 22px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.55;
 }
 .masthead h1 {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 38px;
-  line-height: 1.03;
+  font-size: clamp(34px, 6vw, 46px);
+  line-height: 1.0;
   margin: 0;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+  /* Very slight vertical shade: reads as depth on the title, not as a colour. */
+  background: linear-gradient(175deg, var(--ink), color-mix(in oklab, var(--ink) 74%, var(--accent)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+/* color-mix is widely supported now, but the title must never vanish without it. */
+@supports not (color: color-mix(in oklab, red, blue)) {
+  .masthead h1 { background: none; color: var(--ink); }
 }
 .roster-strip {
   display: flex;
@@ -216,7 +323,7 @@ body {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #fff;
+  color: var(--accent-ink);
   background: var(--accent);
   border: 1px solid var(--accent);
   padding: 4px 10px;
@@ -345,12 +452,12 @@ body.is-editing .card-add { display: flex; }
   border: 1px solid var(--line-strong);
   border-radius: 50%;
   background: var(--surface);
-  color: #b3261e;
+  color: var(--danger);
   font-size: 17px;
   line-height: 1;
   box-shadow: var(--shadow);
 }
-.delete-btn:hover { background: #b3261e; border-color: #b3261e; color: #fff; }
+.delete-btn:hover { background: var(--danger); border-color: var(--danger); color: var(--danger-ink); }
 body.is-editing .task-name { padding-left: 26px; }
 
 /* The wobble. Alternating directions and slightly different durations keep the
@@ -436,10 +543,22 @@ body.is-editing .cards .card.card-add { animation: none; }
   border-radius: 999px;
 }
 .tool-btn:hover { border-color: var(--ink); }
+
+/* Theme switch. Cycles device -> light -> dark, so "follow my phone" stays
+   reachable rather than being lost the first time you touch the button. */
+.theme-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  padding-left: 11px;
+  padding-right: 13px;
+}
+.theme-btn .theme-icon { font-size: 14px; line-height: 1; }
 .tool-btn.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 /* ---- Manage view ----------------------------------------------------------- */
@@ -476,14 +595,14 @@ body.is-editing .cards .card.card-add { animation: none; }
   cursor: pointer;
   border: 1px solid var(--line-strong);
   background: var(--surface);
-  color: #b3261e;
+  color: var(--danger);
   font: inherit;
   font-size: 13px;
   font-weight: 600;
   padding: 7px 12px;
   border-radius: 9px;
 }
-.row-delete:hover { background: #b3261e; border-color: #b3261e; color: #fff; }
+.row-delete:hover { background: var(--danger); border-color: var(--danger); color: var(--danger-ink); }
 .empty-note { margin: 0 0 4px; }
 .manage-add {
   display: flex;
@@ -525,7 +644,7 @@ body.is-editing .cards .card.card-add { animation: none; }
 .check.checked {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .foot {
@@ -536,6 +655,19 @@ body.is-editing .cards .card.card-add { animation: none; }
   color: var(--muted);
   text-align: center;
 }
+.foot p { margin: 0; }
+.foot-note + .foot-legal { margin-top: 10px; }
+.foot-legal {
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  opacity: 0.85;
+}
+.foot-legal a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+.foot-legal a:hover { text-decoration: underline; }
 .foot code {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -567,7 +699,7 @@ body.is-editing .cards .card.card-add { animation: none; }
 .range-pill.active {
   background: var(--ink);
   border-color: var(--ink);
-  color: #fff;
+  color: var(--surface);
 }
 .chart-wrap {
   background: var(--surface);
@@ -585,10 +717,10 @@ body.is-editing .cards .card.card-add { animation: none; }
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--ink);
-  box-shadow: 0 12px 40px rgba(27, 35, 32, 0.22);
+  box-shadow: var(--shadow-lift);
 }
 .modal::backdrop {
-  background: rgba(27, 35, 32, 0.42);
+  background: var(--scrim);
   backdrop-filter: blur(2px);
 }
 .modal[open] { animation: modal-in 0.16s ease-out; }
@@ -617,8 +749,8 @@ body.is-editing .cards .card.card-add { animation: none; }
 }
 .btn-ghost { background: var(--surface); color: var(--ink); }
 .btn-ghost:hover { border-color: var(--ink); }
-.btn-danger { background: #b3261e; border-color: #b3261e; color: #fff; }
-.btn-danger:hover { background: #8f1e18; border-color: #8f1e18; }
+.btn-danger { background: var(--danger); border-color: var(--danger); color: var(--danger-ink); }
+.btn-danger:hover { background: var(--danger-strong); border-color: var(--danger-strong); }
 
 @media (prefers-reduced-motion: reduce) {
   .modal[open] { animation: none; }

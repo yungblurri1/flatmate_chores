@@ -4,7 +4,21 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ state.householdName }} · Chores</title>
+  <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/static/goofy.ico" sizes="32x32">
+
+  {# Stamp the saved theme before the first paint. In <head> and deliberately
+     inline: any later and the page flashes the wrong colours on every load. #}
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem('theme');
+        if (saved === 'light' || saved === 'dark') {
+          document.documentElement.setAttribute('data-theme', saved);
+        }
+      } catch (e) { /* private mode: fall back to the device setting */ }
+    })();
+  </script>
   {# ?v= is the asset mtime: a deploy changes the URL, so browsers cannot serve
      new markup against a cached old stylesheet. #}
   <link rel="stylesheet" href="/static/style.css?v={{ asset_version }}">

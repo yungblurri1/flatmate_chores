@@ -182,14 +182,37 @@ and `static/rotation.js`. **Python is the reference** — change it there first.
 Python over three years of dates and every slacking range, and fails if they
 disagree, so the copies cannot drift silently. It skips if Node isn't installed.
 
+### Light and dark
+
+Light is pink, dark is violet. The theme button cycles **Auto → Light → Dark**;
+Auto follows the device, and only an explicit choice is stored (in `localStorage`),
+so a phone that switches to dark at sunset still switches with it. The saved theme
+is stamped onto `<html>` by a tiny inline script in `<head>` — any later and the
+page flashes the wrong colours on every load.
+
+Colours live entirely in CSS custom properties, and the chart reads the same tokens
+off the document rather than hardcoding hex, so the canvas follows the theme too.
+The dark block is deliberately written twice: once under `prefers-color-scheme` for
+the device, once under `[data-theme]` for the button, because the button has to win
+in both directions.
+
 ### Person colours
 
-The six colours in `main.py` are not arbitrary. A person's colour follows them
-everywhere, so any two can appear side by side — an *all-pairs* palette problem.
-The set was chosen by validating candidates for colour-vision separation: at five
-people it clears deficiency separation (worst ΔE 13.0) and the normal-vision floor
-(16.3). A name is always rendered next to the dot, so colour never identifies
-anyone on its own — which is what keeps a sixth flatmate acceptable.
+The colours in `main.py` are not arbitrary. A person's colour follows them
+everywhere, so any two can appear side by side — an *all-pairs* palette problem,
+not an adjacent-pairs one. Candidates were validated for colour-vision separation
+rather than picked by eye.
+
+There are two lists. The hue **order** is shared, so nobody's colour identity
+changes when you switch theme; only the step differs, chosen against its own
+surface rather than lightened mechanically from the other. Blue/magenta/green leads
+because it is the one order clearing both gates in *both* modes — light worst ΔE
+13.0 (CVD) and 27.5 (normal), dark 13.0 and 26.5.
+
+Light stays clean to five people; **dark only to three**, past which its violet
+closes on its blue (ΔE 1.9 — effectively identical). A name is always rendered next
+to the dot, so colour never identifies anyone on its own, which is what makes the
+degradation survivable rather than broken.
 
 ## Ideas to extend
 
