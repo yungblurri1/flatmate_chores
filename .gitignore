@@ -7,3 +7,5 @@ chores.db
 .pytest_cache/
 # WSL leaves these behind when files are copied over from Windows.
 *:Zone.Identifier
+# Full-size sources kept aside when the web copies were shrunk.
+_originals/

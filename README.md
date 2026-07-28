@@ -30,7 +30,8 @@ flatmate-chores/
 │       ├── style.css
 │       ├── goofy.ico    Favicon
 │       ├── images/      <- weekly banner pictures
-│       └── faces/       <- one portrait per flatmate, named after them
+│       ├── faces/       <- one portrait per flatmate, named after them
+│       └── sounds/      <- done.mp3 plays when a chore is ticked off
 ├── config.yaml          <- edit this: people (+ the seed chore list)
 ├── tests/               pytest, incl. a Python<->JS parity suite
 ├── requirements.txt
@@ -62,6 +63,21 @@ person does — the roster chips and every chore card — ringed in their colour
 Anyone without a file keeps the plain coloured dot, so you can fill the folder in
 one person at a time. The colour ring is deliberate: it means the colour coding
 still works when only some people have a photo.
+
+Portraits keep their transparency, so save them as PNG if they are cut out.
+
+### Sound — `app/static/sounds/`
+
+Drop in **`done.mp3`** and it plays whenever a chore is ticked off. `.ogg`, `.wav`,
+`.m4a` and `.webm` work too. Un-ticking is silent — it's a reward, not a
+notification. An empty folder means the app stays quiet.
+
+### Keep them small
+
+These are served straight to the browser and committed to the repo, so shrink
+before adding: the banner is displayed about 860px wide, which 1600px covers even
+on a retina screen, and portraits render at 22px. Full-size generated PNGs run 7–8
+MB each and will make every page load and every deploy slow.
 
 ## Run it locally
 
