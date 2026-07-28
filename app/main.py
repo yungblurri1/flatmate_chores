@@ -140,6 +140,25 @@ def _faces(people: list[str]) -> dict[str, str]:
     }
 
 
+_SOUND_SUFFIXES = (".mp3", ".ogg", ".wav", ".m4a", ".webm")
+
+
+def _sounds() -> dict[str, str]:
+    """Map a sound name to its file in static/sounds, e.g. {"done": "...mp3"}.
+
+    Named by stem so "done.mp3" is the ticking-off sound. Any of the listed
+    extensions works; an empty folder just means the app stays silent.
+    """
+    folder = BASE_DIR / "static" / "sounds"
+    if not folder.is_dir():
+        return {}
+    return {
+        p.stem.casefold(): f"/static/sounds/{p.name}"
+        for p in sorted(folder.iterdir())
+        if p.is_file() and p.suffix.lower() in _SOUND_SUFFIXES
+    }
+
+
 def _initial_state() -> dict:
     config = load_config()
     done, reassigned = db.all_progress()
@@ -148,6 +167,7 @@ def _initial_state() -> dict:
         "people": config.people,
         "colors": _person_colors(config.people),
         "faces": _faces(config.people),
+        "sounds": _sounds(),
         "tasks": [_task_json(t) for t in db.all_tasks()],
         "done": done,
         "reassigned": reassigned,

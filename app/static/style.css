@@ -204,7 +204,29 @@ body {
   border: 1px solid var(--done-line);
   padding: 3px 8px;
   border-radius: 999px;
+  white-space: nowrap;
 }
+
+/* Replaces the badge when you have navigated away: says how far off you are and
+   takes you back. Deliberately the only accent-coloured control in the nav. */
+.badge-back {
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.badge-back:hover { filter: brightness(0.92); }
+
+/* A week other than this one should not look like the live roster. */
+body.is-other-week .weeknav-label strong { color: var(--muted); }
 
 /* Reassign picker, styled to sit like a chip in the card footer */
 .reassign {

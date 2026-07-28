@@ -88,6 +88,21 @@
     });
   }
 
+  /* Ticking a chore off plays static/sounds/done.mp3 if it is there. One Audio
+   * object, rewound each time, so ticking several chores quickly re-triggers
+   * instead of queueing. play() rejects when the browser blocks autoplay -- a
+   * click counts as a gesture so it normally will not, and a missing noise is
+   * never worth an error. */
+  var doneSound = null;
+
+  function playDoneSound() {
+    if (!STATE.sounds.done) return;
+    if (!doneSound) doneSound = new Audio(STATE.sounds.done);
+    doneSound.currentTime = 0;
+    var played = doneSound.play();
+    if (played && played.catch) played.catch(function () { /* blocked or no file */ });
+  }
+
   /** Styled stand-in for confirm(). Resolves true only if Delete was pressed. */
   function askDelete(name) {
     var dialog = document.getElementById('confirm-dialog');
@@ -125,6 +140,13 @@
 
   function shortDate(d) {
     return d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3);
+  }
+
+  /** "3 weeks ago" / "in 2 weeks" -- how far the view is from the current week. */
+  function weeksAway() {
+    var n = Math.abs(weekOffset);
+    var unit = n === 1 ? 'week' : 'weeks';
+    return weekOffset < 0 ? n + ' ' + unit + ' ago' : 'in ' + n + ' ' + unit;
   }
 
   function personOptions(selected) {
@@ -416,7 +438,11 @@
 
     document.getElementById('weeknav-label').innerHTML =
       '<strong>' + shortDate(bounds[0]) + ' &ndash; ' + shortDate(bounds[1]) + '</strong>' +
-      (weekOffset === 0 ? '<span class="badge-now">This week</span>' : '');
+      (weekOffset === 0
+        ? '<span class="badge-now">This week</span>'
+        : '<button class="badge-back" data-act="today">' + esc(weeksAway()) +
+          ' &middot; back to this week</button>');
+    document.body.classList.toggle('is-other-week', weekOffset !== 0);
 
     document.getElementById('month-label').textContent =
       MONTHS[day.getMonth()] + ' ' + day.getFullYear();
@@ -550,6 +576,11 @@
       refreshRoster();
     },
 
+    today: function () {
+      weekOffset = 0;
+      refreshRoster();
+    },
+
     range: function (el) {
       rangeKey = el.dataset.range;
       refreshChart();
@@ -573,6 +604,7 @@
       var done = el.dataset.done !== '1';
       var key = progressKey(el.dataset.id, el.dataset.period);
       if (done) STATE.done.add(key); else STATE.done.delete(key);
+      if (done) playDoneSound(); // only the reward, not the undo
       rerender();
       api('POST', '/api/completions', {
         task_id: el.dataset.id,
